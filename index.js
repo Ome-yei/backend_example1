@@ -9,6 +9,9 @@ app.use(express.json());
 // Allows request from all origin (CORS Error)
 app.use(cors())
 
+// Allows express to show static content
+app.use(express.static('build'))
+
 // You can use Morgan to log evry request made to server.
 
 let notes = [
