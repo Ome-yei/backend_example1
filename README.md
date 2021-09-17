@@ -1,2 +1,2 @@
 # backend_example1
-Backend to simple note taking application.
+Simple note taking application.
