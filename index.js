@@ -32,7 +32,7 @@ app.use(express.json());
 app.use(cors())
 
 // Allows express to show static content
-// app.use(express.static('build'))
+app.use(express.static('build'))
 
 // You can use Morgan to log evry request made to server.
 
