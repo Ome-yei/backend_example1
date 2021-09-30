@@ -1,6 +1,28 @@
+require('dotenv').config()
 const express = require("express");
 const app = express();
 const cors = require('cors')
+
+const mongoose = require('mongoose');
+const url = process.env.DATABASE_CONNECTION_URL;
+
+mongoose.connect(url);
+
+const noteSchema = new mongoose.Schema({
+    content: String,
+    date: Date,
+    important: Boolean,
+  })
+
+  noteSchema.set('toJSON', {
+    transform: (document, returnedObject) => {
+      returnedObject.id = returnedObject._id.toString()
+      delete returnedObject._id
+      delete returnedObject.__v
+    }
+  })
+  
+  const Note = mongoose.model('Note', noteSchema)
 
 // Takes to JSON data from the request and converts it to a javascript 
 // object and then attaches it to the body property
@@ -10,34 +32,15 @@ app.use(express.json());
 app.use(cors())
 
 // Allows express to show static content
-app.use(express.static('build'))
+// app.use(express.static('build'))
 
 // You can use Morgan to log evry request made to server.
 
-let notes = [
-    {
-        id: 1,
-        content: "HTML is easy",
-        date: "2019-05-30T17:30:31.098Z",
-        important: true
-    },
-    {
-        id: 2,
-        content: "Browser can execute only Javascript",
-        date: "2019-05-30T18:39:34.091Z",
-        important: false
-    },
-    {
-        id: 3,
-        content: "GET and POST are the most important methods of HTTP protocol",
-        date: "2019-05-30T19:20:14.298Z",
-        important: true
-    }
-]
-
 // get all notes
 app.get('/api/notes', (req, res) => {
-    res.json(notes);
+    Note.find({}).then(notes => {
+        res.json(notes);
+    })
 });
 
 // get one note
