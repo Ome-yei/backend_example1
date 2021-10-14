@@ -1,28 +1,11 @@
-require('dotenv').config()
 const express = require("express");
 const app = express();
+
 const cors = require('cors')
 
-const mongoose = require('mongoose');
-const url = process.env.DATABASE_CONNECTION_URL;
 
-mongoose.connect(url);
-
-const noteSchema = new mongoose.Schema({
-    content: String,
-    date: Date,
-    important: Boolean,
-  })
-
-  noteSchema.set('toJSON', {
-    transform: (document, returnedObject) => {
-      returnedObject.id = returnedObject._id.toString()
-      delete returnedObject._id
-      delete returnedObject.__v
-    }
-  })
-  
-  const Note = mongoose.model('Note', noteSchema)
+// Allows express to show static content
+app.use(express.static('build'))
 
 // Takes to JSON data from the request and converts it to a javascript 
 // object and then attaches it to the body property
@@ -31,8 +14,10 @@ app.use(express.json());
 // Allows request from all origin (CORS Error)
 app.use(cors())
 
-// Allows express to show static content
-app.use(express.static('build'))
+
+const Note = require('./models/note');
+const note = require("./models/note");
+
 
 // You can use Morgan to log evry request made to server.
 
@@ -43,64 +28,84 @@ app.get('/api/notes', (req, res) => {
     })
 });
 
-// get one note
-app.get('/api/notes/:id', (req, res) => {
-    let noteId = Number(req.params.id);
+app.put('/api/notes/:id', (req, res, next) => {
+    console.log("I am put...")
+    const body = req.body;
 
-    // Check if that note is in the array - return note
-    // If not in the array - return status code 400 {"Note not found"}
-    const note = notes.find(note => note.id === noteId);
-    if (!note) {
-        res.status(400).json({ error: "System malfunction, note cannot be found..." })
+    const note = {
+        content: body.content,
+        important: body.important
     }
-    res.json(note);
+
+    Note.findByIdAndUpdate(req.params.id, note, { new: true })
+        .then(updatedNote => {
+            res.json(updatedNote);
+        })
+        .catch(error => next(error))
+})
+
+
+// get one note
+app.get('/api/notes/:id', (req, res, next) => {
+    Note.findById(req.params.id).then(note => {
+        if (note) {
+            res.json(note)
+        } else {
+            res.status(404).end();
+        }
+    })
+        .catch(error => next(error));
 });
 
 // delete one note
 app.delete('/api/notes/:id', (req, res) => {
     let noteId = Number(req.params.id);
 
-    // Check if noteID is in the array
-    // True - send back status: 204 
-    // False = send back status: 404 - {"System Malfunction, can't delete what is not there..."}
-    const toBeDeleted = notes.find(note => note.id === noteId);
-    if (!toBeDeleted) {
-        res.status(404).json({ error: "System malfunction, can't delete what is not there..." });
-    }
-
-    // Actually remove the item from the array
-    res.status(204).end();
+    Note.findByIdAndRemove(noteId)
+        .then(result => {
+            res.status(204).end();
+        })
+        .catch(error => next(error));
 });
 
+
 //post one note
-app.post('/api/notes', (req, res) => {
+app.post('/api/notes', (req, res, next) => {
     const body = req.body;
     if (!body.content) {
-        return res.status(400).json({ error: "System malfunction, conten is misisng..." });
+        return res.status(400).json({ error: "System malfunction, conten is missing..." });
     }
 
-    const note = {
-        id: randomId(),
+    const note = new Note({
         content: body.content,
         date: new Date(),
         important: body.important || false,
-    }
+    })
 
-    notes = notes.concat(note);
-    res.json(note);
+    note.save().then(savedNote => {
+        res.json(savedNote)
+    })
+        .catch(error => next(error))
 });
 
 
-const randomId = () => {
-    const maxId = notes.length > 0
-        ? Math.max(...notes.map(n => n.id))
-        : 0
 
-    return maxId + 1;
+const errorHandler = (error, req, res, next) => {
+    console.error(error.message)
+
+    if (error.name === 'CastError') {
+        return res.status(400).send({ error: 'malformatted id' })
+    } else if (error.name === 'ValidationError') {
+        return res.status(400).json({ error: error.message })
+    }
+
+    next(error)
 }
 
+// this has to be the last loaded middleware.
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
+    console.log(`Server running on port ${PORT}`)
 })

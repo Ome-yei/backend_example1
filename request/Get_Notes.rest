@@ -12,6 +12,15 @@ POST http://localhost:3001/api/notes
 content-type: application/json
 
 {
-    "content": "Defend the missle attack",
+    "content": "Defend the missile attack",
+    "important": true 
+}
+
+###
+PUT http://localhost:3001/api/notes/6164ff54f2c27efdaf5ed098
+content-type: application/json
+
+{
+    "content": "The particle shield has been deactivated. We won't make it out of here alive!",
     "important": true 
 }
